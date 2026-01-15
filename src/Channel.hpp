@@ -1,38 +1,25 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Client.hpp                                         :+:      :+:    :+:   */
+/*   Channel.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/10/23 20:36:30 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/13 05:09:51 by razaccar         ###   ########.fr       */
+/*   Created: 2026/01/13 03:43:09 by razaccar          #+#    #+#             */
+/*   Updated: 2026/01/13 03:57:34 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #pragma once
 
-#ifndef CLIENT_HPP
-# define CLIENT_HPP
+#include "Client.hpp"
 
-#include <string>
+class Channel {
+    public:
+		Channel();
+		~Channel();
 
-// typedef struct User {
-//     std::string nickname;  
-//     std::string username;  
-// } User;
-
-class Client {
-	public:
-		Client();
-		~Client();
-
-	private:
-		int         socket_;
-        std::string nickname;
-        std::string username;
-        std::string realname;
-        // std::string server;
+    private:
+        std::string name;
+        Client*     clients;
 };
-
-#endif

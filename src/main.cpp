@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/14 12:15:18 by razaccar          #+#    #+#             */
-/*   Updated: 2025/10/28 17:57:07 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/15 00:42:05 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,6 +44,7 @@ int	main(int argc, char** argv) {
 		return -1;
 	}
 
+    
 	long port = strtol(argv[1], NULL, 10);
 	std::string	password = argv[2];
 	if (isvalid_port(port) == false) return -1;
@@ -54,8 +55,8 @@ int	main(int argc, char** argv) {
 
 		Dispatcher dispatcher;
 
-		Acceptor acceptor(listener.getSockfd(), dispatcher);
-		dispatcher.addHandler(listener.getSockfd(), &acceptor);
+		Acceptor* acceptor = new Acceptor(listener.getSockfd(), dispatcher);
+		dispatcher.addHandler(listener.getSockfd(), acceptor);
 
 		do { dispatcher.eventLoop(); } while (1);
 

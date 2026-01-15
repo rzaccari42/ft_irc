@@ -6,16 +6,19 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/27 19:56:22 by razaccar          #+#    #+#             */
-/*   Updated: 2025/10/29 03:05:25 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/13 05:48:51 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
+#pragma once
 
 #ifndef CONNECTION_HPP
 # define CONNECTION_HPP
 
 #include "EventHandler.hpp"
+#include "Client.hpp"
 
-#define BUFFSIZE 512
+#define BUFFSIZE 10
 
 class Connection : public AEventHandler {
 	public:
@@ -25,7 +28,9 @@ class Connection : public AEventHandler {
 		void handleEvent(short event);
 
 	private:
-		char*	buf_;
+        Client      client;
+		char*	    buf_;
+        std::string message_;
 };
 
 #endif
