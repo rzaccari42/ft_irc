@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/23 20:36:15 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/19 15:55:50 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/19 21:40:20 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,6 +27,7 @@ void Client::setNick(std::string nick) { nick_ = nick; }
 void Client::setUser(std::string user) { user_ = user; }
 
 void Client::setRealname(std::string realname) { realname_ = realname; }
+
 
 bool Client::isRegistered() { return registered_; }
 

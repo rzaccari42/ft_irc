@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/27 19:56:37 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/19 14:56:15 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/20 00:51:05 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,7 +44,10 @@ short Connection::interest()
 
 void Connection::queueSend(std::string const& message)
 {
+    bool wasEmpty = out_.empty();
     out_ += message;
+    if (wasEmpty)
+        reactor_.updateEvents(socket_);
 }
 
 void Connection::onReadable()

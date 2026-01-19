@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 01:51:31 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/19 18:58:27 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/19 22:46:59 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,13 +46,12 @@ void IRCServer::addConnection(Connection* connection)
     connections_[sock] = connection;
 }
 
-void IRCServer::onDisconnect(Connection& connection, std::string& ctx)
+void IRCServer::onDisconnect(Connection& connection)
 {
     int const sock = connection.getSocket();
     unbindNick(sock);
     connections_.erase(sock);
     reactor_.remHandler(sock);
-    (void)ctx;
 }
 
 bool IRCServer::bindNick(int sock, std::string const& nick)

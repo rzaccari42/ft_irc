@@ -6,10 +6,11 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 04:00:01 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/19 02:30:10 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/19 21:44:31 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+#include "IRCServer.hpp"
 #include "Acceptor.hpp"
 #include "Connection.hpp"
 #include <cerrno>
@@ -39,6 +40,7 @@ void Acceptor::onReadable()
             try {
                 Connection* connection = new Connection(remote, reactor_, server_);
                 reactor_.addHandler(remote, connection);
+                server_.addConnection(connection);
             } catch (std::bad_alloc& e) {
                 close(remote);
                 std::cerr << "ERROR: cannot allocate memory for new connection.\n";

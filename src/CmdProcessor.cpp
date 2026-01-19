@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/18 06:34:46 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/19 19:27:46 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/19 23:22:22 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -127,13 +127,13 @@ CmdProcessor::CmdHandler CmdProcessor::handlers_[CMD_COUNT] = {
 void CmdProcessor::dispatch(Connection& connection, Message const& message)
 {
     Cmd cmd = getCmd(message.command);
+    if (cmd <= UNKNOWN ||cmd >= CMD_COUNT || handlers_[cmd] == 0) {
+        sendError(connection, "unknown command");
+        return;
+    }
     if (!connection.client().isRegistered() &&
         cmd != PASS && cmd != NICK && cmd != USER && cmd != QUIT) {
         sendError(connection, "client not registered");
-        return;
-    }
-    if (cmd <= UNKNOWN ||cmd >= CMD_COUNT || handlers_[cmd] == 0) {
-        sendError(connection, "unknown command");
         return;
     }
     (this->*handlers_[cmd])(connection, message);
@@ -141,17 +141,18 @@ void CmdProcessor::dispatch(Connection& connection, Message const& message)
 
 void CmdProcessor::sendError(Connection& connection, std::string const& err)
 {
-    // sanitize: never inject raw CR/LF into IRC output
     std::string clean;
     clean.reserve(err.size());
     for (std::string::size_type i = 0; i < err.size(); ++i) {
         char c = err[i];
         clean += (c == '\r' || c == '\n') ? ' ' : c;
     }
-    // always send IRC line terminator
     if (clean.size() < 2 || clean.substr(clean.size() - 2) != "\r\n")
         clean += "\r\n";
 
+    std::string errmsg = replyPrefix(connection);
+    errmsg += " error: ";
+    errmsg += clean;
     connection.queueSend(clean);
 }
 
@@ -278,11 +279,9 @@ void CmdProcessor::handleQuit(Connection& connection, Message const& cmd)
     std::string reason = "Client Quit";
     if (!cmd.params.empty() && !cmd.params[0].empty())
         reason = cmd.params[0];
-    // // Inform the client
-    // std::string line = ":" + clientTag(connection) + " QUIT :" + reason + "\r\n";
-    // connection.queueSend(line);
-    std::string ctx = "QUIT: " + reason;
-    connection.server().onDisconnect(connection, ctx);
+    std::string line = ":" + clientTag(connection) + " QUIT :" + reason + "\r\n";
+    connection.queueSend(line);
+    connection.server().onDisconnect(connection); // no time to receive queued reply ?
 }
 
 // void CmdProcessor::handleJoin(Connection& connection, Message const& cmd)

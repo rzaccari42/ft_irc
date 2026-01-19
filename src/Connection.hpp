@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/27 19:56:22 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/19 18:31:54 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/19 23:28:32 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,8 +41,6 @@ class Connection : public AEventHandler {
         void    onReadable();
         void    onWritable();
         void    onError(short revents);
-
-        // void    processMsg(std::string const& message);
 };
 
 #endif
