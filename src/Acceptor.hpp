@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 03:59:26 by razaccar          #+#    #+#             */
-/*   Updated: 2025/10/28 03:01:23 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/19 00:27:52 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,14 +15,21 @@
 
 #include "EventHandler.hpp"
 
+class IRCServer;
+
 class Acceptor : public AEventHandler {
 	public:
-		Acceptor(int socket, IReactor& reactor);
+		Acceptor(int socket, IReactor& reactor, IRCServer& server);
 		~Acceptor();
 
-		void handleEvent(short event);
+        short   interest();
 
 	private:
+        IRCServer&  server_;
+
+        void    onReadable();
+        void    onWritable();
+        void    onError(short revents);
 };
 
 #endif

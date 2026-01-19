@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 02:21:48 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/15 12:52:10 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/19 18:20:09 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,29 +15,37 @@
 
 #include "IReactor.hpp"
 #include "EventHandler.hpp"
+#include "Demultiplexer.hpp"
 #include <map>
-#include <sys/poll.h>
-#include <vector>
+#include <set>
+
+typedef struct HandlerEntry {
+    AEventHandler*  handler;
+    short           cachedEvents;
+} HandlerEntry;
 
 class Dispatcher : public IReactor {
-	public:
+	public: 
 		Dispatcher();
 		~Dispatcher();
 		
-        // redundant socket param -> handler already stores socket
-		void addHandler(int socket, AEventHandler* handler);
-		void remHandler(int socket);
+		void    addHandler(int socket, AEventHandler* handler);
+		void    remHandler(int socket);
+        void    updateEvents(int socket);
 
-		void eventLoop();
+		void    tick(int timeoutms);
 
 	private:
-        bool                            dispatching_;
-		std::map<int, AEventHandler*>	registry_;
-		std::vector<int>            	pendingAdd_;
-		std::vector<int>            	pendingRem_;
+        Demultiplexer               poll_;
+		std::map<int, HandlerEntry> registry_;
+		std::map<int, HandlerEntry> pendingAdd_;
+		std::set<int>       	    pendingRem_;
+        std::set<int>               pendingUpdate_;
+        bool                        dispatching_;
 
-		std::vector<pollfd> getSockets();
-        void                flushRem();
+        void    flushAdd();
+        void    flushRem();
+        void    flushUpdate();
 };
 
 #endif

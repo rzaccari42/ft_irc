@@ -6,11 +6,9 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/27 19:56:22 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/13 05:48:51 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/19 18:31:54 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
-#pragma once
 
 #ifndef CONNECTION_HPP
 # define CONNECTION_HPP
@@ -20,17 +18,31 @@
 
 #define BUFFSIZE 10
 
+class IRCServer;
+
 class Connection : public AEventHandler {
 	public:
-		Connection(int socket, IReactor& reactor);
+		Connection(int socket, IReactor& reactor, IRCServer& server);
 		~Connection();
 
-		void handleEvent(short event);
+        IRCServer&  server();
+        Client&     client();
+        int         socket();
+        short       interest();
+
+        void        queueSend(std::string const& message);
 
 	private:
-        Client      client;
-		char*	    buf_;
-        std::string message_;
+        IRCServer&  server_;
+        Client      client_;
+        std::string	in_;
+        std::string	out_;
+
+        void    onReadable();
+        void    onWritable();
+        void    onError(short revents);
+
+        // void    processMsg(std::string const& message);
 };
 
 #endif

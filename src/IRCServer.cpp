@@ -1,0 +1,95 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   IRCServer.cpp                                      :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2026/01/19 01:51:31 by razaccar          #+#    #+#             */
+/*   Updated: 2026/01/19 18:58:27 by razaccar         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "IRCServer.hpp"
+#include "Listener.hpp"
+#include "Acceptor.hpp"
+#include "Connection.hpp"
+#include <string>
+
+
+IRCServer::IRCServer(int port, const std::string& password, IReactor& reactor)
+:   port_(port),
+    password_(password),
+    listener_(port),
+    reactor_(reactor),
+    protocol_(),
+    stop_(false)
+{
+    Acceptor* acceptor = new Acceptor(listener_.getSockfd(), reactor_, *this);
+    reactor_.addHandler(listener_.getSockfd(), acceptor);
+}
+
+IRCServer::~IRCServer()
+{
+
+}
+
+void IRCServer::run()
+{
+    do { reactor_.tick(500); } while (stop_ == false);
+}
+
+void IRCServer::addConnection(Connection* connection)
+{
+    if (!connection) return;
+    int const sock = connection->getSocket();
+    connections_[sock] = connection;
+}
+
+void IRCServer::onDisconnect(Connection& connection, std::string& ctx)
+{
+    int const sock = connection.getSocket();
+    unbindNick(sock);
+    connections_.erase(sock);
+    reactor_.remHandler(sock);
+    (void)ctx;
+}
+
+bool IRCServer::bindNick(int sock, std::string const& nick)
+{
+    if (nick.empty()) return false;
+    std::map<std::string, int>::iterator entry = nickToSock_.find(nick);
+    if (entry != nickToSock_.end() && entry->second != sock) return false;
+    unbindNick(sock);
+    nickToSock_[nick] = sock;
+    return true;
+}
+
+void IRCServer::unbindNick(int sock)
+{
+    std::map<std::string, int>::iterator it = nickToSock_.begin();
+    for (; it != nickToSock_.end(); it++) {
+        if (it->second == sock) {
+            nickToSock_.erase(it);
+            return;
+        }
+    }
+}
+
+Connection* IRCServer::findBySock(int sock)
+{
+    std::map<int, Connection*>::iterator c = connections_.find(sock);
+    return (c == connections_.end()) ? NULL : c->second;
+}
+
+Connection* IRCServer::findByNick(std::string const& nick)
+{
+    std::map<std::string, int>::iterator entry = nickToSock_.find(nick);
+    if (entry == nickToSock_.end()) return 0;
+    return findBySock(entry->second);
+}
+
+CmdProcessor& IRCServer::protocol() { return protocol_; }
+
+const std::string& IRCServer::password() const { return password_; }
+

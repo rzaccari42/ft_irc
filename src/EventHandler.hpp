@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 03:35:35 by razaccar          #+#    #+#             */
-/*   Updated: 2025/10/28 02:54:11 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/19 00:40:35 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,11 +22,16 @@ class AEventHandler {
 
 		int	getSocket() const;
 
-		virtual void	handleEvent(short event) = 0;
+		virtual void	handleEvent(short event);
+        virtual short   interest() = 0;
 
 	protected:
 		int			socket_;
 		IReactor&	reactor_;
+
+        virtual void    onReadable() = 0;
+        virtual void    onWritable() = 0;
+        virtual void    onError(short revents) = 0;
 };
 
 #endif

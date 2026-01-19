@@ -6,30 +6,62 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 04:00:01 by razaccar          #+#    #+#             */
-/*   Updated: 2025/10/29 02:53:17 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/19 02:30:10 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Acceptor.hpp"
 #include "Connection.hpp"
+#include <cerrno>
 #include <fcntl.h>
 #include <cstring>
 #include <iostream>
+#include <new>
+#include <sys/poll.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
-Acceptor::Acceptor(int socket, IReactor& reactor)
-	: AEventHandler(socket, reactor) {}
+Acceptor::Acceptor(int socket, IReactor& reactor, IRCServer& server)
+	: AEventHandler(socket, reactor)
+    , server_(server) {}
 
 Acceptor::~Acceptor() {}
 
-void	Acceptor::handleEvent(short event) {
-	(void)event;
-	int	remote;
+short Acceptor::interest() { return POLLIN; }
 
-	remote = accept(socket_, NULL, NULL);
-	fcntl(remote, F_SETFL, fcntl(remote, F_GETFL) | O_NONBLOCK);
-	Connection* connection = new Connection(remote, reactor_);
-	reactor_.addHandler(remote, connection);
-	std::cout << "new connection established" << std::endl;
+void Acceptor::onReadable()
+{
+    while (1) {
+        int remote = accept(socket_, NULL, NULL);
+        if (remote >= 0) {
+            fcntl(remote, F_SETFL, fcntl(remote, F_GETFL) | O_NONBLOCK);
+            try {
+                Connection* connection = new Connection(remote, reactor_, server_);
+                reactor_.addHandler(remote, connection);
+            } catch (std::bad_alloc& e) {
+                close(remote);
+                std::cerr << "ERROR: cannot allocate memory for new connection.\n";
+                std::cerr << e.what() << std::endl;
+            }
+            continue;
+        }
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            break;
+        else {
+            std::cerr << "ERROR: accept() failed." << std::endl; // use errno ?
+            break;
+        }
+            
+    }
+}
+
+void Acceptor::onWritable() {}
+
+void Acceptor::onError(short revents)
+{
+    reactor_.remHandler(socket_);
+    if (revents & POLLNVAL) std::cout << "BUG: POLLNVAL" << std::endl;
+    else if (revents & POLLERR) std::cout << "socket error" << std::endl;
+    else if (revents & POLLHUP) std::cout << "client hung up" << std::endl;
 }
