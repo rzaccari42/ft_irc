@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/18 01:55:58 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/19 22:46:54 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/21 12:30:06 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,20 +24,24 @@ class Connection;
 
 class IRCServer {
     public:
-        IRCServer(int port, const std::string& password, IReactor& reactor);
+        IRCServer(int port, std::string const& password, IReactor& reactor);
         ~IRCServer();
+
+        CmdProcessor&       protocol();
+        std::string const&  password() const;
 
         void                run();
         void                addConnection(Connection* connection);
         void                onDisconnect(Connection& connection);
 
-        bool                bindNick(int sock, const std::string& nick);
+        bool                bindNick(int sock, std::string const& nick);
         void                unbindNick(int fd);
         Connection*         findBySock(int sock);
         Connection*         findByNick(std::string const& nick);
 
-        CmdProcessor&       protocol();
-        std::string const&  password() const;
+        Channel*            findChannel(std::string const& name);
+        Channel&            getOrCreateChannel(std::string const& name);
+        void                eraseChannelIfEmpty(std::string const& name);
 
     private:
         // Configuration
@@ -50,7 +54,7 @@ class IRCServer {
         // Global state
         std::map<int, Connection*>      connections_;
         std::map<std::string, int>      nickToSock_;
-        std::map<std::string, Channel*> channels_;
+        std::map<std::string, Channel>  channels_;
         bool                            stop_;
 };
 

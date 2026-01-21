@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/18 06:35:09 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/19 14:37:42 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/21 17:26:52 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,11 +50,11 @@ class CmdProcessor {
         void    handleUser(Connection& connection, Message const& cmd);
         void    handlePrivmsg(Connection& connection, Message const& cmd);
         void    handleQuit(Connection& connection, Message const& cmd);
-        // void    handleJoin(Connection& connection, Message const& cmd);
-        // void    handleTopic(Connection& connection, Message const& cmd);
-        // void    handleInvite(Connection& connection, Message const& cmd);
-        // void    handleKick(Connection& connection, Message const& cmd);
-        // void    handleMode(Connection& connection, Message const& cmd);
+        void    handleJoin(Connection& connection, Message const& cmd);
+        void    handleTopic(Connection& connection, Message const& cmd);
+        void    handleInvite(Connection& connection, Message const& cmd);
+        void    handleKick(Connection& connection, Message const& cmd);
+        void    handleMode(Connection& connection, Message const& cmd);
 
         static CmdHandler handlers_[CMD_COUNT];
 };

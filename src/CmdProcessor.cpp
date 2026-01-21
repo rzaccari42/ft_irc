@@ -6,14 +6,16 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/18 06:34:46 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/19 23:22:22 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/21 17:59:06 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "CmdProcessor.hpp"
+#include "Channel.hpp"
 #include "Connection.hpp"
 #include "IRCServer.hpp"
 #include <cctype>
+#include <cstddef>
 #include <cstdio>
 #include <string>
 
@@ -78,6 +80,52 @@ static void replyNumeric(Connection& connection,
     connection.queueSend(line);
 }
 
+static std::vector<std::string> splitComma(std::string const& s)
+{
+    std::vector<std::string> out;
+    std::string cur;
+    for (std::size_t i = 0; i < s.size(); ++i) {
+        if (s[i] == ',') {
+            out.push_back(cur);
+            cur.clear();
+        }
+        else cur += s[i];
+    }
+    out.push_back(cur);
+    return out;
+}
+
+static bool isChannelName(std::string const& s)
+{
+    return !s.empty() && s[0] == '#';
+}
+
+static bool parseSize(std::string const& s, std::size_t& out)
+{
+    if (s.empty()) return false;
+    std::size_t n = 0;
+    for (std::size_t i = 0; i < s.size(); ++i) {
+        if (s[i] < '0' || s[i] > '9') return false;
+        n = n * 10 + (s[i] - '0');
+    }
+    out = n;
+    return true;
+}
+
+static std::string buildNamesList(Channel& channel)
+{
+    std::string names;
+    Channel::Members const& members = channel.members();
+    for (Channel::Members::const_iterator member = members.begin(); member != members.end(); member++) {
+        Connection* connection = *member;
+        if (!connection) continue;
+        if (!names.empty()) names += " ";
+        if (channel.isOperator(connection)) names += "@";
+        names += connection->client().getNick();
+    }
+    return names;
+}
+
 /* ************************************************************************* */
 
 CmdProcessor::CmdProcessor() {}
@@ -117,11 +165,11 @@ CmdProcessor::CmdHandler CmdProcessor::handlers_[CMD_COUNT] = {
     &CmdProcessor::handleUser,
     &CmdProcessor::handlePrivmsg,
     &CmdProcessor::handleQuit,
-    // &CmdProcessor::handleJoin,
-    // &CmdProcessor::handleTopic,
-    // &CmdProcessor::handleInvite,
-    // &CmdProcessor::handleKick,
-    // &CmdProcessor::handleMode,
+    &CmdProcessor::handleJoin,
+    &CmdProcessor::handleTopic,
+    &CmdProcessor::handleInvite,
+    &CmdProcessor::handleKick,
+    &CmdProcessor::handleMode,
 };
 
 void CmdProcessor::dispatch(Connection& connection, Message const& message)
@@ -284,18 +332,338 @@ void CmdProcessor::handleQuit(Connection& connection, Message const& cmd)
     connection.server().onDisconnect(connection); // no time to receive queued reply ?
 }
 
-// void CmdProcessor::handleJoin(Connection& connection, Message const& cmd)
-// {}
-//
-// void CmdProcessor::handleTopic(Connection& connection, Message const& cmd)
-// {}
-//
-// void CmdProcessor::handleInvite(Connection& connection, Message const& cmd)
-// {}
-//
-// void CmdProcessor::handleKick(Connection& connection, Message const& cmd)
-// {}
-//
-// void CmdProcessor::handleMode(Connection& connection, Message const& cmd)
-// {}
-//
+void CmdProcessor::handleJoin(Connection& connection, Message const& cmd)
+{
+    if (cmd.params.size() < 1) {
+        replyNumeric(connection, 461, "JOIN", "Not enough parameters");
+        return;
+    }
+    std::vector<std::string> chans = splitComma(cmd.params[0]);
+    std::vector<std::string> keys;
+    if (cmd.params.size() >= 2) keys = splitComma(cmd.params[1]);
+
+    for (std::size_t i = 0; i < chans.size(); ++i) {
+        std::string const& chanName = chans[i];
+        std::string key = (i < keys.size()) ? keys[i] : ""; //?
+        if (isChannelName(chanName) == false) {
+            replyNumeric(connection, 403, chanName, "No such channel");
+            continue;
+        }
+
+        Channel& channel = connection.server().getOrCreateChannel(chanName);
+        if (channel.hasMember(&connection)) {
+            replyNumeric(connection, 443, connection.client().getNick() + " " 
+                         + chanName, "is already on channel");
+            continue;
+        }
+        if (channel.hasMode(Channel::MODE_INVITE_ONLY) &&
+            !channel.isInvitedNick(connection.client().getNick())) {
+            replyNumeric(connection, 473, chanName, "Cannot join channel (+i)");
+            continue;
+        }
+        if (channel.hasMode(Channel::MODE_KEY) && key != channel.key()) {
+            replyNumeric(connection, 475, chanName, "Cannot join channel (+k)");
+            continue;
+        }
+        if (channel.hasMode(Channel::MODE_LIMIT) && channel.memberCount() >= channel.limit()) {
+            replyNumeric(connection, 471, chanName, "Cannot join channel (+l)");
+            continue;
+        }
+        if (channel.hasMode(Channel::MODE_INVITE_ONLY))
+            channel.consumeInviteNick(connection.client().getNick());
+
+        channel.addMember(connection);
+        std::string joinLine = ":" + connection.client().getNick() 
+                             + " JOIN " + chanName + "\r\n";
+        Channel::Members::const_iterator member;
+        for (member = channel.members().begin(); member != channel.members().end(); ++member)
+            (*member)->queueSend(joinLine);
+        if (channel.topic().empty())
+            replyNumeric(connection, 331, chanName, "No topic is set");
+        else
+            replyNumeric(connection, 332, chanName, channel.topic());
+        std::string names = buildNamesList(channel);
+        replyNumeric(connection, 353, "= " + chanName + " " + names, "");
+        replyNumeric(connection, 366, chanName, "End of /NAMES list");
+    }
+}
+
+void CmdProcessor::handleTopic(Connection& connection, Message const& cmd)
+{
+    if (cmd.params.size() < 1) {
+        replyNumeric(connection, 461, "TOPIC", "Not enough parameters");
+        return;
+    }
+    std::string const& chanName = cmd.params[0];
+    Channel* channel = connection.server().findChannel(chanName);
+    if  (!channel) {
+        replyNumeric(connection, 403, chanName, "No such channel");
+        return;
+    }
+
+    if (cmd.params.size() == 1) {
+        if (channel->topic().empty())
+            replyNumeric(connection, 331, chanName, "No topic is set");
+        else
+            replyNumeric(connection, 332, chanName, channel->topic());
+        return;
+    }
+    
+    if (channel->hasMember(&connection) == false) {
+        replyNumeric(connection, 442, chanName, "You're not on that channel");
+        return;
+    } // ??
+    if (channel->hasMode(Channel::MODE_TOPIC_OP) && channel->isOperator(&connection) == false) {
+        replyNumeric(connection, 482, chanName, "You're not channel operator");
+        return;
+    }
+    std::string const& newTopic = cmd.params[1];
+    channel->setTopic(newTopic);
+
+    std::string line = ":" + connection.client().getNick() + " TOPIC " + chanName + " :" + newTopic + "\r\n";
+    Channel::Members::const_iterator member;
+    for (member = channel->members().begin(); member != channel->members().end(); ++member)
+        (*member)->queueSend(line);
+}
+
+void CmdProcessor::handleInvite(Connection& connection, Message const& cmd)
+{
+    if (cmd.params.size() < 2) {
+        replyNumeric(connection, 461, "INVITE", "Not enough parameters");
+        return;
+    }
+    
+    std::string const& targetNick = cmd.params[0];
+    std::string const& chanName = cmd.params[2];
+    
+    Channel* channel = connection.server().findChannel(chanName);
+    if (!channel) {
+        replyNumeric(connection, 403, chanName, "No such channel");
+        return;
+    }
+    // if channel exists only member of the channel are allowed to invite other users
+    if (channel->hasMember(&connection) == false) {
+        replyNumeric(connection, 442, chanName, "You're not on that channel");
+        return;
+    }
+    // if MODE_INVITE_ONLY -> only operator can issue INVITE cmd
+    if (channel->hasMode(Channel::MODE_INVITE_ONLY) && channel->isOperator(&connection)) {
+        replyNumeric(connection, 482, chanName, "You're not channel operator");
+        return;
+    }
+
+    Connection* target = connection.server().findByNick(targetNick);
+    if (!target) {
+        replyNumeric(connection, 401, targetNick, "No such nick");
+        return;
+    }
+    if (channel->hasMember(target)) {
+        replyNumeric(connection, 443, targetNick + " " + chanName, "is already on channel");
+        return;
+    }
+
+    channel->inviteNick(targetNick);
+
+    // RPL_INVITING (341)
+    replyNumeric(connection, 341, targetNick + " " + chanName, "");
+    std::string line = ":" + connection.client().getNick() + " INVITE "
+                     + targetNick + " :" + chanName + "\r\n";
+    target->queueSend(line);
+}
+
+void CmdProcessor::handleKick(Connection& connection, Message const& cmd)
+{
+    if (cmd.params.size() < 2) {
+        replyNumeric(connection, 461, "KICK", "Not enough parameters");
+        return;
+    }
+
+    std::string const& chanName = cmd.params[0];
+    std::string const& targetNick = cmd.params[1];
+    std::string reason = (cmd.params.size() >= 3) ? cmd.params[2] : "Kicked";
+
+    Channel* channel = connection.server().findChannel(chanName);
+    if (!channel) {
+        replyNumeric(connection, 403, chanName, "No such channel");
+        return;
+    }
+    if (!channel->hasMember(&connection)) {
+        replyNumeric(connection, 442, chanName, "You're not on that channel");
+        return;
+    }
+    if (!channel->isOperator(&connection)) {
+        replyNumeric(connection, 482, chanName, "You're not channel operator");
+        return;
+    }
+
+    Connection* target = connection.server().findByNick(targetNick);
+    if (!target) {
+        replyNumeric(connection, 401, targetNick, "No such nick");
+        return;
+    }
+    if (!channel->hasMember(target)) {
+        replyNumeric(connection, 441, targetNick + " " + chanName, "They aren't on that channel");
+        return;
+    }
+
+    channel->remMember(*target);
+    connection.server().eraseChannelIfEmpty(chanName);
+
+    std::string line = ":" + connection.client().getNick()
+                     + " KICK " + chanName + " " + targetNick
+                     + " :" + reason + "\r\n";
+    Channel::Members::const_iterator member = channel->members().begin();
+    for (; member != channel->members().end(); ++member)
+        (*member)->queueSend(line);
+    target->queueSend(line);
+}
+
+void CmdProcessor::handleMode(Connection& connection, Message const& cmd)
+{
+    if (cmd.params.size() < 1) {
+        replyNumeric(connection, 461, "MODE", "Not enough parameters");
+        return;
+    }
+    std::string const& chanName = cmd.params[0];
+    Channel* channel = connection.server().findChannel(chanName);
+    if (!channel) {
+        replyNumeric(connection, 403, chanName, "No such channel");
+        return;
+    }
+
+    if (cmd.params.size() == 1) {
+        std::string modes = "+";
+        if (channel->hasMode(Channel::MODE_INVITE_ONLY)) modes += "i";
+        if (channel->hasMode(Channel::MODE_TOPIC_OP))    modes += "t";
+        if (channel->hasMode(Channel::MODE_KEY))         modes += "k";
+        if (channel->hasMode(Channel::MODE_LIMIT))       modes += "l";
+
+        std::string params;
+        if (channel->hasMode(Channel::MODE_KEY))   params += " " + channel->key();
+        if (channel->hasMode(Channel::MODE_LIMIT)) {
+            char buf[32];
+            std::sprintf(buf, "%lu", (unsigned long)channel->limit());
+            params += " ";
+            params += buf;
+        }
+        // RPL_CHANNELMODEIS (324) with a simple +modes listing
+        replyNumeric(connection, 324, chanName + " " + modes + params, "");
+        return;
+    }
+    
+    if (!channel->hasMember(&connection)) {
+        replyNumeric(connection, 442, chanName, "You're not on that channel");
+        return;
+    }
+    if (!channel->isOperator(&connection)) {
+        replyNumeric(connection, 482, chanName, "You're not channel operator");
+        return;
+    }
+    std::string modeStr = cmd.params[1];
+    std::size_t argi = 2;
+    char sign = 0;
+    std::string appliedModes;
+    std::vector<std::string> appliedArgs;
+    for (std::size_t i = 0; i < modeStr.size(); ++i) {
+        char m = modeStr[i];
+        if (m == '+' || m == '-') { sign = m; }
+        if (!sign) {
+            std::string bad;
+            bad += m;
+            replyNumeric(connection, 472, bad, "is unknown mode char to me");
+            return;
+            //check if correct
+        }
+        bool add = (sign == '+');
+        if (m == 'i') {
+            if (add) channel->setMode(Channel::MODE_INVITE_ONLY);
+            else     channel->clearMode(Channel::MODE_INVITE_ONLY);
+            appliedModes += (add ? "+i" : "-i");
+        }
+        else if (m == 't') {
+            if (add) channel->setMode(Channel::MODE_TOPIC_OP);
+            else     channel->clearMode(Channel::MODE_TOPIC_OP);
+            appliedModes += (add ? "+t" : "-t");
+        }
+        else if (m == 'k') {
+            if (add) {
+                if (argi >= cmd.params.size()) {
+                    replyNumeric(connection, 461, "MODE", "Not enough parameters");
+                    return;
+                }
+                channel->setKey(cmd.params[argi++]);
+                appliedModes += "+k";
+                appliedArgs.push_back(channel->key());
+            }
+            else {
+                channel->clearKey();
+                appliedModes += "-k";
+            }
+        }
+        else if (m == 'l') {
+            if (add) {
+                if (argi >= cmd.params.size()) {
+                    replyNumeric(connection, 461, "MODE", "Not enough parameters");
+                    return;
+                }
+                std::size_t limit;
+                if (!parseSize(cmd.params[argi], limit)) {
+                    replyNumeric(connection, 461, "MODE", "Invalid limit");
+                    return;
+                }
+                ++argi;
+                channel->setLimit(limit);
+                appliedModes += "+l";
+                char buf[32];
+                std::sprintf(buf, "%lu", (unsigned long)limit);
+                appliedArgs.push_back(buf);
+            }
+            else {
+                channel->clearLimit();
+                appliedModes += "-l";
+            }
+        }
+        else if (m == 'o') {
+            if (argi >= cmd.params.size()) {
+                replyNumeric(connection, 461, "MODE", "Not enough parameters");
+                return;
+            }
+
+            std::string targetNick = cmd.params[argi++];
+            Connection* target = connection.server().findByNick(targetNick);
+            if (!target) {
+                replyNumeric(connection, 401, targetNick, "No such nick");
+                return;
+            }
+            if (!channel->hasMember(target)) {
+                replyNumeric(connection, 441, targetNick + " " + chanName, "They aren't on that channel");
+                return;
+            }
+            if (add) channel->addOperator(*target);
+            else     channel->remOperator(*target);
+
+            appliedModes += (add ? "+o" : "-o");
+            appliedArgs.push_back(targetNick);
+        }
+        else {
+            // ERR_UNKNOWNMODE (472)
+            std::string t;
+            t += m;
+            replyNumeric(connection, 472, t, "is unknown mode char to me");
+            return;
+        }
+    }
+
+    if (appliedModes.empty())
+        return; // ??
+
+    std::string line = ":" + connection.client().getNick() + " MODE " + chanName + " " + appliedModes;
+    for (std::size_t k = 0; k < appliedArgs.size(); ++k) {
+        line += " ";
+        line += appliedArgs[k];
+    }
+    line += "\r\n";
+    Channel::Members::const_iterator member;
+    for (member = channel->members().begin(); member != channel->members().end(); ++member)
+        (*member)->queueSend(line);
+}
