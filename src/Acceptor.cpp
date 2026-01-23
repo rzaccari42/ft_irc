@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 04:00:01 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/19 21:44:31 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/22 18:57:35 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,8 +62,10 @@ void Acceptor::onWritable() {}
 
 void Acceptor::onError(short revents)
 {
-    reactor_.remHandler(socket_);
-    if (revents & POLLNVAL) std::cout << "BUG: POLLNVAL" << std::endl;
-    else if (revents & POLLERR) std::cout << "socket error" << std::endl;
-    else if (revents & POLLHUP) std::cout << "client hung up" << std::endl;
+    if (revents & POLLNVAL) std::cout << "ERROR (POLLNVAL): invalid socket fd" << std::endl;
+    else if (revents & POLLERR) 
+        std::cout << "ERROR (POLLERR): socket connection failed" << std::endl;
+    else if (revents & POLLHUP)
+        std::cout << "ERROR (POLLHUP): socket connection failed" << std::endl;
+    reactor_.remHandler(socket_); // to check
 }

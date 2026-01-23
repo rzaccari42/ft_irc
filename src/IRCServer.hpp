@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/18 01:55:58 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/21 12:30:06 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/23 00:59:00 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,35 @@
 #include "Listener.hpp"
 #include <string>
 #include <map>
+
+#define SERVER_NAME "irc.42.fr"
+
+enum ReplyCode {
+    RPL_WELCOME             = 001,
+    RPL_CHANNELMODEIS       = 324,
+    RPL_NOTOPIC             = 331,
+    RPL_TOPIC               = 332,
+    RPL_INVITING            = 341,
+    RPL_NAMREPLY            = 353,
+    RPL_ENDOFNAMES          = 366,
+    ERR_NOSUCHNICK          = 401,
+    ERR_NOSUCHCHANNEL       = 403,
+    ERR_NOTEXTTOSEND        = 412,
+    ERR_ERRONEUSNICKNAME    = 432,
+    ERR_NICKNAMEINUSE       = 433,
+    ERR_USERNOTINCHANNEL    = 441,
+    ERR_NOTONCHANNEL        = 442,
+    ERR_USERONCHANNEL       = 443,
+    ERR_NOTREGISTERED       = 451,
+    ERR_NEEDMOREPARAMS      = 461,
+    ERR_ALREADYREGISTRED    = 462,
+    ERR_PASSWDMISMATCH      = 464,
+    ERR_CHANNELISFULL       = 471,
+    ERR_UNKNOWNMODE         = 472,
+    ERR_INVITEONLYCHAN      = 473,
+    ERR_BADCHANNELKEY       = 475,
+    ERR_CHANOPRIVSNEEDED    = 482
+};
 
 class Connection;
 

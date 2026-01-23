@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 01:51:31 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/21 12:17:58 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/23 03:06:49 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 #include "Acceptor.hpp"
 #include "Connection.hpp"
 #include <string>
+#include <iostream>
 
 IRCServer::IRCServer(int port, const std::string& password, IReactor& reactor)
 :   port_(port),
@@ -51,6 +52,14 @@ void IRCServer::addConnection(Connection* connection)
 
 void IRCServer::onDisconnect(Connection& connection)
 {
+    std::cout << "Disconnecting " << connection.client().getNick() << std::endl;
+    if (channels_.size() > 0) {
+        std::map<std::string, Channel>::iterator channel = channels_.begin();
+        for (; channel != channels_.end(); ++channel) {
+            if (channel->second.hasMember(&connection))
+                channel->second.remMember(connection);
+        }
+    }
     int const sock = connection.getSocket();
     unbindNick(sock);
     connections_.erase(sock);

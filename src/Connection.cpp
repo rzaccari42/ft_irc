@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/27 19:56:37 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/20 00:51:05 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/23 02:45:46 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,33 +56,31 @@ void Connection::onReadable()
 
     while (1) {
         const ssize_t nbytes = recv(socket_, buf, sizeof(buf), 0);
-        if (nbytes > 0) 
+        if (nbytes > 0) {
             in_.append(buf, nbytes);
-        else if (nbytes == 0) {
-            onError(POLLHUP); // ???
+            continue;
+        }
+        if (nbytes == 0) {
+            server_.onDisconnect(*this);
             return;
         }
-        else {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-                break;
-            onError(POLLERR);
-            return;
-        }
+        if (errno == EINTR) continue;
+        if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+        server_.onDisconnect(*this);
+        return;
     }
-
     while (1) {
         std::string::size_type nl = in_.find('\n');
-        if (nl == std::string::npos)
-            break;
+        if (nl == std::string::npos) break;
         std::string msg = in_.substr(0, nl + 1);
+        std::cout << msg << std::endl;
         in_.erase(0, nl + 1);
         while (!msg.empty() && (msg[msg.size()-1] == '\n' || 
                                 msg[msg.size()-1] == '\r')) {
             msg.erase(msg.size()-1);
         }
-        if (!msg.empty()) {
+        if (!msg.empty())
             server_.protocol().onMessage(*this, msg);
-        }
     }
 }
 
@@ -90,17 +88,23 @@ void Connection::onWritable()
 {
     while (!out_.empty()) {
         const ssize_t nbytes = send(socket_, out_.data(), out_.size(), 0);
-        if (nbytes > 0)
+        if (nbytes > 0) {
             out_.erase(0, nbytes);
-        else {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) return;
-            onError(POLLERR);
-            return;
+            continue;
         }
+        if (nbytes < 0 && errno == EINTR) continue;
+        if (nbytes < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) return;
+        server_.onDisconnect(*this);
+        return;
     }
+    reactor_.updateEvents(socket_);
 }
 
 void Connection::onError(short revents)
 {
-    std::cerr << "poll error on fd " << socket_ << " revents=" << revents << "\n";
+    if (revents & POLLNVAL) std::cout << "ERROR (POLLNVAL): invalid socket fd" << std::endl;
+    else if (revents & POLLERR) std::cout << "ERROR (POLLERR): ";
+    else if (revents & POLLHUP) std::cout << "ERROR (POLLHUP): ";
+    std::cerr << "lost connection to socket " << socket_ << "\n";
+    server_.onDisconnect(*this);
 }

@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/18 06:35:09 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/21 17:26:52 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/23 00:52:14 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,8 @@ typedef enum Cmd {
     INVITE,
     KICK,
     MODE,
+    CAP,
+    PING,
     CMD_COUNT
 } Cmd;
 
@@ -55,6 +57,8 @@ class CmdProcessor {
         void    handleInvite(Connection& connection, Message const& cmd);
         void    handleKick(Connection& connection, Message const& cmd);
         void    handleMode(Connection& connection, Message const& cmd);
+        void    handleCap(Connection& connection, Message const& cmd);
+        void    handlePing(Connection& connection, Message const& cmd);
 
         static CmdHandler handlers_[CMD_COUNT];
 };

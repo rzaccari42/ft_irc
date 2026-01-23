@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 03:35:58 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/19 01:23:32 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/22 18:46:07 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,3 +33,4 @@ void AEventHandler::handleEvent(short revents)
 void AEventHandler::onReadable() {}
 void AEventHandler::onWritable() {}
 void AEventHandler::onError(short) {}
+
