@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/23 20:36:30 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/20 23:24:51 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/23 13:14:40 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,7 +41,6 @@ class Client {
         std::string nick_;
         std::string user_;
         std::string realname_;
-        // Mode        mode_;
         // Channel     channel;
 
         bool        passAccepted_;

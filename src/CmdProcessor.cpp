@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/18 06:34:46 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/23 11:33:51 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/25 22:29:43 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,28 +48,28 @@ static std::string clientTag(Connection& connection)
     return connection.client().getNick();
 }
 
-static void reply(Connection& connection, std::string const& lineNoCrlf)
-{
-    std::string reply = replyPrefix();
-    std::string line = lineNoCrlf;
-    if (line.size() < 2 || line.substr(line.size() - 2) != "\r\n")
-        line += "\r\n";
-    reply += line;
-    connection.queueSend(reply);
-}
+// static void reply(Connection& connection, std::string const& lineNoCrlf)
+// {
+//     std::string reply = replyPrefix();
+//     std::string line = lineNoCrlf;
+//     if (line.size() < 2 || line.substr(line.size() - 2) != "\r\n")
+//         line += "\r\n";
+//     reply += line;
+//     connection.queueSend(reply);
+// }
 
 static void replyNumeric(Connection& connection,
                         int code,
                         std::string const& middle,
                         std::string const& trailing)
 {
-    char buf[16];
-    std::sprintf(buf, "%03d", code);
+    char num[16];
+    std::sprintf(num, "%03d", code);
 
     std::string line = replyPrefix();
-    line += buf;
+    line += num;
     line += " ";
-    // line += clientTag(connection);
+    line += clientTag(connection);
     if (!middle.empty()) {
         line += " ";
         line += middle;
@@ -150,6 +150,7 @@ Cmd CmdProcessor::getCmd(std::string const& s)
     if (s == "PASS")    return PASS;
     if (s == "NICK")    return NICK;
     if (s == "USER")    return USER;
+    if (s == "NOTICE")  return NOTICE;
     if (s == "PRIVMSG") return PRIVMSG;
     if (s == "QUIT")    return QUIT;
     if (s == "JOIN")    return JOIN;
@@ -167,9 +168,11 @@ CmdProcessor::CmdHandler CmdProcessor::handlers_[CMD_COUNT] = {
     &CmdProcessor::handlePass,
     &CmdProcessor::handleNick,
     &CmdProcessor::handleUser,
+    &CmdProcessor::handleNotice,
     &CmdProcessor::handlePrivmsg,
     &CmdProcessor::handleQuit,
     &CmdProcessor::handleJoin,
+    &CmdProcessor::handlePart,
     &CmdProcessor::handleTopic,
     &CmdProcessor::handleInvite,
     &CmdProcessor::handleKick,
@@ -225,11 +228,11 @@ void CmdProcessor::handlePass(Connection& connection, Message const& cmd)
         replyNumeric(connection, ERR_PASSWDMISMATCH, "", "Password incorrect");
         return;
     }
-    reply(connection, "Password OK, use USER command to terminate registration.");
+    // reply(connection, "Password OK, use USER command to terminate registration.");
     connection.client().setPassAccepted();
     connection.client().tryRegister();
     if (connection.client().isRegistered()) {
-        std::string msg = "Welcome to the FT_IRC server";
+        std::string msg = "Welcome to the FT_IRC server ";
         msg += connection.client().getNick() + "!\r\n";
         replyNumeric(connection, RPL_WELCOME, "", msg);
     }
@@ -251,7 +254,7 @@ void CmdProcessor::handleNick(Connection& connection, Message const& cmd)
     if (!connection.client().getNick().empty())
         connection.server().unbindNick(sock);
     if (!connection.server().bindNick(sock, nick)) {
-        replyNumeric(connection, ERR_NICKNAMEINUSE, nick, "Nickname is already in use");
+        replyNumeric(connection, ERR_NICKNAMEINUSE, connection.client().getNick(), "Nickname is already in use");
         return;
     }
     std::string const oldNick = connection.client().getNick();
@@ -269,7 +272,7 @@ void CmdProcessor::handleNick(Connection& connection, Message const& cmd)
     }
     connection.client().tryRegister();
     if (connection.client().isRegistered()) {
-        std::string msg = "Welcome to the FT_IRC server";
+        std::string msg = "Welcome to the FT_IRC server ";
         msg += connection.client().getNick() + "!\r\n";
         replyNumeric(connection, RPL_WELCOME, "", msg);
     }
@@ -300,10 +303,41 @@ void CmdProcessor::handleUser(Connection& connection, Message const& cmd)
     connection.client().setRealname(realname);
     connection.client().tryRegister();
     if (connection.client().isRegistered()) {
-        std::string msg = "Welcome to the FT_IRC server";
+        std::string msg = "Welcome to the FT_IRC server ";
         msg += connection.client().getNick() + "!\r\n";
         replyNumeric(connection, RPL_WELCOME, "", msg);
     }
+}
+
+void CmdProcessor::handleNotice(Connection& connection, Message const& cmd)
+{
+    if (cmd.params.size() < 2) return;
+    std::string const& target = cmd.params[0];
+    std::string const& message = cmd.params[1];
+    if (message.empty()) return;
+
+    if (isChannelName(target)) {
+        Channel* channel = connection.server().findChannel(target);
+        if (!channel) return;
+        std::string line = ":" + connection.client().getNick();
+        line += " PRIVMSG ";
+        line += target;
+        line += " :";
+        line += message;
+        line += "\r\n";
+        channel->broadcast(connection, line);
+        return;
+    }
+    
+    Connection* dst = connection.server().findByNick(target);
+    if (!dst) return;
+    std::string line = ":" + connection.client().getNick();
+    line += " PRIVMSG ";
+    line += target;
+    line += " :";
+    line += message;
+    line += "\r\n";
+    dst->queueSend(line);
 }
 
 void CmdProcessor::handlePrivmsg(Connection& connection, Message const& cmd)
@@ -325,7 +359,13 @@ void CmdProcessor::handlePrivmsg(Connection& connection, Message const& cmd)
             replyNumeric(connection, ERR_NOSUCHCHANNEL, target, "No such channel");
             return;
         }
-        channel->broadcast(connection, message);
+        std::string line = ":" + connection.client().getNick();
+        line += " PRIVMSG ";
+        line += target;
+        line += " :";
+        line += message;
+        line += "\r\n";
+        channel->broadcast(connection, line);
         return;
     }
     
@@ -412,6 +452,12 @@ void CmdProcessor::handleJoin(Connection& connection, Message const& cmd)
     }
 }
 
+void CmdProcessor::handlePart(Connection& connection, Message const& cmd)
+{
+    (void)connection;
+    (void)cmd;
+}
+
 void CmdProcessor::handleTopic(Connection& connection, Message const& cmd)
 {
     if (cmd.params.size() < 1) {
@@ -463,20 +509,18 @@ void CmdProcessor::handleInvite(Connection& connection, Message const& cmd)
     }
     
     std::string const& targetNick = cmd.params[0];
-    std::string const& chanName = cmd.params[2];
+    std::string const& chanName = cmd.params[1];
     
     Channel* channel = connection.server().findChannel(chanName);
     if (!channel) {
         replyNumeric(connection, ERR_NOSUCHCHANNEL, chanName, "No such channel");
         return;
     }
-    // if channel exists only member of the channel are allowed to invite other users
     if (channel->hasMember(&connection) == false) {
         replyNumeric(connection, ERR_NOTONCHANNEL, chanName, "You're not on that channel");
         return;
     }
-    // if MODE_INVITE_ONLY -> only operator can issue INVITE cmd
-    if (channel->hasMode(Channel::MODE_INVITE_ONLY) && channel->isOperator(&connection)) {
+    if (channel->hasMode(Channel::MODE_INVITE_ONLY) && channel->isOperator(&connection) == false) {
         replyNumeric(connection, ERR_CHANOPRIVSNEEDED, chanName, "You're not channel operator");
         return;
     }
@@ -540,7 +584,6 @@ void CmdProcessor::handleKick(Connection& connection, Message const& cmd)
     std::string line = ":" + connection.client().getNick()
                      + " KICK " + chanName + " " + targetNick
                      + " :" + reason + "\r\n";
-    // channel->broadcast() ??
     Channel::Members::const_iterator member = channel->members().begin();
     for (; member != channel->members().end(); ++member)
         (*member)->queueSend(line);
@@ -588,38 +631,39 @@ void CmdProcessor::handleMode(Connection& connection, Message const& cmd)
         replyNumeric(connection, ERR_CHANOPRIVSNEEDED, chanName, "You're not channel operator");
         return;
     }
+
     std::string modeStr = cmd.params[1];
     std::size_t argi = 2;
-    char sign = 0;
     std::string appliedModes;
     std::vector<std::string> appliedArgs;
-    for (std::size_t i = 0; i < modeStr.size(); ++i) {
-        char m = modeStr[i];
-        if (m == '+' || m == '-') { sign = m; }
-        if (!sign) {
-            std::string bad;
-            bad += m;
-            replyNumeric(connection, ERR_UNKNOWNMODE, bad, "is unknown mode char to me");
-            return;
-            //check if correct
-        }
+
+    char sign = modeStr[0];
+    if (sign != '+' && sign != '-') {
+        std::string invalid;
+        invalid += sign;
+        replyNumeric(connection, ERR_UNKNOWNMODE, invalid, "Invalid sign character");
+        return;
+    }
+    for (std::size_t i = 1; i < modeStr.size(); ++i) {
         bool add = (sign == '+');
-        if (m == 'i') {
+        char mode = modeStr[i];
+        if (mode == 'i') {
             if (add) channel->setMode(Channel::MODE_INVITE_ONLY);
             else     channel->clearMode(Channel::MODE_INVITE_ONLY);
             appliedModes += (add ? "+i" : "-i");
         }
-        else if (m == 't') {
+        else if (mode == 't') {
             if (add) channel->setMode(Channel::MODE_TOPIC_OP);
             else     channel->clearMode(Channel::MODE_TOPIC_OP);
             appliedModes += (add ? "+t" : "-t");
         }
-        else if (m == 'k') {
+        else if (mode == 'k') {
             if (add) {
                 if (argi >= cmd.params.size()) {
                     replyNumeric(connection, ERR_NEEDMOREPARAMS, "MODE", "Not enough parameters");
-                    return;
+                    break;
                 }
+                // check key not empty
                 channel->setKey(cmd.params[argi++]);
                 appliedModes += "+k";
                 appliedArgs.push_back(channel->key());
@@ -629,18 +673,17 @@ void CmdProcessor::handleMode(Connection& connection, Message const& cmd)
                 appliedModes += "-k";
             }
         }
-        else if (m == 'l') {
+        else if (mode == 'l') {
             if (add) {
                 if (argi >= cmd.params.size()) {
                     replyNumeric(connection, ERR_NEEDMOREPARAMS, "MODE", "Not enough parameters");
-                    return;
+                    break;
                 }
                 std::size_t limit;
-                if (!parseSize(cmd.params[argi], limit)) {
+                if (!parseSize(cmd.params[argi++], limit)) {
                     replyNumeric(connection, ERR_NEEDMOREPARAMS, "MODE", "Invalid limit");
-                    return;
+                    break;
                 }
-                ++argi;
                 channel->setLimit(limit);
                 appliedModes += "+l";
                 char buf[32];
@@ -652,21 +695,21 @@ void CmdProcessor::handleMode(Connection& connection, Message const& cmd)
                 appliedModes += "-l";
             }
         }
-        else if (m == 'o') {
+        else if (mode == 'o') {
             if (argi >= cmd.params.size()) {
                 replyNumeric(connection, ERR_NEEDMOREPARAMS, "MODE", "Not enough parameters");
-                return;
+                break;
             }
 
             std::string targetNick = cmd.params[argi++];
             Connection* target = connection.server().findByNick(targetNick);
             if (!target) {
                 replyNumeric(connection, ERR_NOSUCHNICK, targetNick, "No such nick");
-                return;
+                break;
             }
             if (!channel->hasMember(target)) {
                 replyNumeric(connection, ERR_USERNOTINCHANNEL, targetNick + " " + chanName, "They aren't on that channel");
-                return;
+                break;
             }
             if (add) channel->addOperator(*target);
             else     channel->remOperator(*target);
@@ -676,9 +719,9 @@ void CmdProcessor::handleMode(Connection& connection, Message const& cmd)
         }
         else {
             std::string t;
-            t += m;
+            t += mode;
             replyNumeric(connection, ERR_UNKNOWNMODE, t, "is unknown mode char to me");
-            return;
+            break;
         }
     }
 
@@ -707,7 +750,8 @@ void CmdProcessor::handlePing(Connection& connection, Message const& cmd)
 {
     (void)cmd;
     std::string reply = "PONG ";
-    reply += ":";
+    // reply += ":";
     reply += SERVER_NAME;
+    reply += "\r\n";
     connection.queueSend(reply);
 }

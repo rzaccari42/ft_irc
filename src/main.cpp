@@ -6,13 +6,12 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/14 12:15:18 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/19 19:10:31 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/26 02:07:22 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "IRCServer.hpp"
 #include "Dispatcher.hpp"
-#include "Errors.hpp"
 #include <csignal>
 #include <cstdlib>
 #include <exception>
@@ -54,3 +53,10 @@ int	main(int argc, char** argv)
 		return 1; // return errno
 	}
 }
+
+// TESTS
+// - signals handling (C-Z / C-D)
+// - channel + modes
+// - leaks
+// - 
+

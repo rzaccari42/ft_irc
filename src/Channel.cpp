@@ -6,12 +6,13 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/20 22:32:05 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/21 18:07:47 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/24 16:59:23 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Channel.hpp"
 #include "Connection.hpp"
+#include <iostream>
 
 Channel::Channel(std::string const& name)
 : name_(name)
@@ -99,25 +100,16 @@ void Channel::consumeInviteNick(std::string const& nick)
     invited_.erase(nick);
 }
 
-static std::string ensureCRLF(const std::string& s) {
-    if (s.size() >= 2 && s[s.size()-2] == '\r' && s[s.size()-1] == '\n')
-        return s;
-    return s + "\r\n";
-}
-
-// Usual IRC behavior: don't echo to sender if 'from' is the sender.
-// But you only pass a string, so we can't compare pointers safely.
-// So: we broadcast to ALL; caller can choose what "from" is and whether to self-send.
 void Channel::broadcast(Connection& sender, std::string const& message)
 {
-    std::string msg = ":" + sender.client().getNick() + " " + message;
-    msg = ensureCRLF(msg);
-
     for (Members::iterator it = members_.begin(); it != members_.end(); ++it) {
         Connection* dst = *it;
-        if (!dst) continue;
+        if (!dst) {
+            std::cout << "no dest\n";
+            continue;
+        }
         if (dst == &sender) continue;
-        dst->queueSend(msg);
+        dst->queueSend(message);
     }
 }
 

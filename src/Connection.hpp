@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/27 19:56:22 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/22 18:44:15 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/25 03:39:10 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@
 #include "EventHandler.hpp"
 #include "Client.hpp"
 
-#define BUFFSIZE 10
+#define BUFFSIZE 5
 
 class IRCServer;
 

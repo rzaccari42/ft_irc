@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/18 06:35:09 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/23 00:52:14 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/25 22:21:31 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,9 +22,11 @@ typedef enum Cmd {
     PASS,
     NICK,
     USER,
+    NOTICE,
     PRIVMSG,
     QUIT,
     JOIN,
+    PART,
     TOPIC,
     INVITE,
     KICK,
@@ -50,9 +52,11 @@ class CmdProcessor {
         void    handlePass(Connection& connection, Message const& cmd);
         void    handleNick(Connection& connection, Message const& cmd);
         void    handleUser(Connection& connection, Message const& cmd);
+        void    handleNotice(Connection& connection, Message const& cmd);
         void    handlePrivmsg(Connection& connection, Message const& cmd);
         void    handleQuit(Connection& connection, Message const& cmd);
         void    handleJoin(Connection& connection, Message const& cmd);
+        void    handlePart(Connection& connection, Message const& cmd);
         void    handleTopic(Connection& connection, Message const& cmd);
         void    handleInvite(Connection& connection, Message const& cmd);
         void    handleKick(Connection& connection, Message const& cmd);

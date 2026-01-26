@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/18 01:55:58 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/23 00:59:00 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/26 02:26:30 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,11 +60,12 @@ class IRCServer {
         std::string const&  password() const;
 
         void                run();
+        void                shutdown();
         void                addConnection(Connection* connection);
         void                onDisconnect(Connection& connection);
 
         bool                bindNick(int sock, std::string const& nick);
-        void                unbindNick(int fd);
+        void                unbindNick(int sock);
         Connection*         findBySock(int sock);
         Connection*         findByNick(std::string const& nick);
 
@@ -82,9 +83,8 @@ class IRCServer {
 
         // Global state
         std::map<int, Connection*>      connections_;
-        std::map<std::string, int>      nickToSock_;
         std::map<std::string, Channel>  channels_;
-        bool                            stop_;
+        std::map<std::string, int>      nickToSock_;
 };
 
 #endif

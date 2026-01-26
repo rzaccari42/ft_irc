@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/27 19:56:37 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/23 02:45:46 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/25 03:53:40 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,8 +64,14 @@ void Connection::onReadable()
             server_.onDisconnect(*this);
             return;
         }
-        if (errno == EINTR) continue;
-        if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+        if (errno == EINTR) {
+            std::cout << "EINTR\n";
+            continue;
+        }
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            std::cout << "EAGAIN | EWOULDBLOCK\n";
+            break;
+        }
         server_.onDisconnect(*this);
         return;
     }

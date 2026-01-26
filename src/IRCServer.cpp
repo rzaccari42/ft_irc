@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 01:51:31 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/23 03:06:49 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/26 03:24:04 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #include "Listener.hpp"
 #include "Acceptor.hpp"
 #include "Connection.hpp"
+#include "signal.hpp"
 #include <string>
 #include <iostream>
 
@@ -22,8 +23,7 @@ IRCServer::IRCServer(int port, const std::string& password, IReactor& reactor)
     password_(password),
     listener_(port),
     reactor_(reactor),
-    protocol_(),
-    stop_(false)
+    protocol_()
 {
     Acceptor* acceptor = new Acceptor(listener_.getSockfd(), reactor_, *this);
     reactor_.addHandler(listener_.getSockfd(), acceptor);
@@ -31,7 +31,7 @@ IRCServer::IRCServer(int port, const std::string& password, IReactor& reactor)
 
 IRCServer::~IRCServer()
 {
-
+    shutdown();
 }
 
 CmdProcessor& IRCServer::protocol() { return protocol_; }
@@ -40,7 +40,17 @@ const std::string& IRCServer::password() const { return password_; }
 
 void IRCServer::run()
 {
-    do { reactor_.tick(500); } while (stop_ == false);
+    setupSignalHandlers();
+    do { reactor_.tick(100); } while (g_running);
+}
+
+void IRCServer::shutdown()
+{
+    std::cout << "\nShutting down server...\n";
+    std::map<int, Connection*>::iterator it = connections_.begin();
+    for (; it != connections_.end(); ++it)
+        reactor_.remHandler(it->second->socket());
+    reactor_.remHandler(listener_.getSockfd());
 }
 
 void IRCServer::addConnection(Connection* connection)
@@ -99,8 +109,6 @@ Connection* IRCServer::findByNick(std::string const& nick)
     if (entry == nickToSock_.end()) return 0;
     return findBySock(entry->second);
 }
-
-
 
 Channel* IRCServer::findChannel(std::string const& name)
 {
