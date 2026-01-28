@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   IRCServer.cpp                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
+/*   By: rzaccari <rzaccari@student.42lausanne.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 01:51:31 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/28 15:07:06 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/28 21:47:31 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 #include "Acceptor.hpp"
 #include "Connection.hpp"
 #include "signal.hpp"
+#include <cstdio>
 #include <string>
 #include <iostream>
 
@@ -112,13 +113,36 @@ void IRCServer::onDisconnect(Connection& connection)
     reactor_.remHandler(sock);
 }
 
+void IRCServer::broadcastNickChange(Connection& connection,
+									std::string const& oldNick,
+									std::string const& newNick)
+{
+    std::map<std::string, Channel>::iterator channel = channels_.begin();
+	for (; channel != channels_.end(); ++channel) {
+		if (channel->second.hasMember(&connection)) {
+			std::string reply = ":";
+			reply += oldNick;
+			reply += "!";
+			reply += connection.client().getUser();
+			reply += "@";
+			reply += connection.client().getHost();
+			reply += " NICK :";
+			reply += newNick;
+			reply += "\r\n";
+			channel->second.broadcast(connection, reply);
+		}
+	}
+}
+
 bool IRCServer::bindNick(int sock, std::string const& nick)
 {
     if (nick.empty()) return false;
+
     std::map<std::string, int>::iterator entry = nickToSock_.find(nick);
     if (entry != nickToSock_.end() && entry->second != sock) return false;
     unbindNick(sock);
     nickToSock_[nick] = sock;
+
     return true;
 }
 

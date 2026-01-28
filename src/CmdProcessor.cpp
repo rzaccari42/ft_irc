@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/18 06:34:46 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/28 14:56:30 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/28 21:46:13 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -262,26 +262,29 @@ void CmdProcessor::handleNick(Connection& connection, Message const& cmd)
         return;
     }
 
+    std::string const oldNick = connection.client().getNick();
     int const sock = connection.socket();
-    if (!connection.client().getNick().empty())
-        connection.server().unbindNick(sock);
     if (!connection.server().bindNick(sock, nick)) {
-        replyNumeric(connection, ERR_NICKNAMEINUSE, connection.client().getNick(), "Nickname is already in use");
+        replyNumeric(connection, ERR_NICKNAMEINUSE, nick, "Nickname is already in use");
         return;
     }
-    std::string const oldNick = connection.client().getNick();
     connection.client().setNick(nick);
 
-    // if user already registered: broadcast nick change
     if (connection.client().isRegistered()) {
-        std::string reply = clientPrefix(connection);
+        std::string reply = ":";
+		reply += oldNick;
+		reply += "!";
+		reply += connection.client().getUser();
+		reply += "@";
+		reply += connection.client().getHost();
         reply += " NICK :";
         reply += nick;
         reply += "\r\n";
         connection.queueSend(reply);
+		connection.server().broadcastNickChange(connection, oldNick, nick);
         return;
-        // later: should also propagate to channels/other clients
     }
+
     connection.client().tryRegister();
     if (connection.client().isRegistered()) {
         std::string msg = "Welcome to the FT_IRC server ";

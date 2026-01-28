@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/18 01:55:58 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/28 15:06:45 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/28 21:45:54 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,6 +68,7 @@ class IRCServer {
         void                unbindNick(int sock);
         Connection*         findBySock(int sock);
         Connection*         findByNick(std::string const& nick);
+		void				broadcastNickChange(Connection& connection, std::string const& oldNick, std::string const& newNick);
 
         Channel*            findChannel(std::string const& name);
         Channel&            getOrCreateChannel(std::string const& name);
