@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/23 20:36:15 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/19 21:40:20 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/28 03:39:28 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,11 +16,15 @@ Client::Client() : passAccepted_(false), registered_(false) {}
 
 Client::~Client() {}
 
+std::string const& Client::getHost() const { return host_; }
+
 std::string const& Client::getNick() const { return nick_; }
 
 std::string const& Client::getUser() const { return user_; }
 
 std::string const& Client::getRealname() const { return realname_; }
+
+void Client::setHost(std::string host) { host_ = host; }
 
 void Client::setNick(std::string nick) { nick_ = nick; }
 

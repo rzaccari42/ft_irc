@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/13 03:43:09 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/23 13:14:46 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/28 12:06:23 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,6 +47,7 @@ class Channel {
         bool                remOperator(Connection& c); // must remain member
         bool                hasMember(Connection const* c) const;
         bool                isOperator(Connection const* c) const;
+        bool                ensureOperator();
 
         bool                isInvitedNick(std::string const& nick) const;
         void                inviteNick(std::string const& nick);

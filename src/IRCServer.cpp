@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 01:51:31 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/26 03:24:04 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/28 15:07:06 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,8 +19,7 @@
 #include <iostream>
 
 IRCServer::IRCServer(int port, const std::string& password, IReactor& reactor)
-:   port_(port),
-    password_(password),
+:   password_(password),
     listener_(port),
     reactor_(reactor),
     protocol_()
@@ -64,10 +63,47 @@ void IRCServer::onDisconnect(Connection& connection)
 {
     std::cout << "Disconnecting " << connection.client().getNick() << std::endl;
     if (channels_.size() > 0) {
+        std::vector<std::string> chans;
+        chans.reserve(channels_.size());
         std::map<std::string, Channel>::iterator channel = channels_.begin();
         for (; channel != channels_.end(); ++channel) {
             if (channel->second.hasMember(&connection))
-                channel->second.remMember(connection);
+                chans.push_back(channel->first);
+        }
+
+        for (size_t i = 0; i < chans.size(); ++i) {
+            std::map<std::string, Channel>::iterator it = channels_.find(chans[i]);
+            if (it == channels_.end())
+                continue;
+            std::string prefix = ":";
+            prefix += connection.client().getNick();
+            prefix += "!";
+            prefix += connection.client().getUser();
+            prefix += "@";
+            prefix += connection.client().getHost();
+
+            Channel& channel = it->second;
+
+            std::string line = prefix + " QUIT :Client Quit\r\n";
+            Channel::Members::const_iterator member = channel.members().begin();
+            for (; member != channel.members().end(); ++member) {
+                if (&connection == *member) continue;
+                (*member)->queueSend(line);
+            }
+
+            channel.remMember(connection);
+            if (connection.server().eraseChannelIfEmpty(chans[i])) continue;
+            if (channel.ensureOperator()) {
+                Channel::Members::iterator first = channel.members().begin();
+                std::string line = ":";
+                line += SERVER_NAME;
+                line += " MODE " + chans[i];
+                line += " +o " + (*first)->client().getNick();
+                line += "\r\n";
+                Channel::Members::const_iterator member = channel.members().begin();
+                for (; member != channel.members().end(); ++member)
+                    (*member)->queueSend(line);
+            }
         }
     }
     int const sock = connection.getSocket();
@@ -127,9 +163,12 @@ Channel& IRCServer::getOrCreateChannel(std::string const& name)
     return ins.first->second;
 }
 
-void IRCServer::eraseChannelIfEmpty(std::string const& name)
+bool IRCServer::eraseChannelIfEmpty(std::string const& name)
 {
     std::map<std::string, Channel>::iterator channel = channels_.find(name);
-    if (channel != channels_.end() && channel->second.empty())
+    if (channel != channels_.end() && channel->second.empty()) {
         channels_.erase(channel);
+        return true;
+    }
+    return false;
 }

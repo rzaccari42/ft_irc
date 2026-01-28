@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/20 22:32:05 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/24 16:59:23 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/28 12:06:50 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -59,7 +59,7 @@ bool Channel::remMember(Connection& connection)
     if (member == members_.end()) return false;
 
     members_.erase(member);
-    remOperator(connection); // test
+    remOperator(connection);
     return true;
 }
 
@@ -83,6 +83,18 @@ bool Channel::isOperator(Connection const* connection) const
     return operators_.find(const_cast<Connection*>(connection)) != operators_.end();
 }
 
+bool Channel::ensureOperator()
+{
+    if (!members_.empty()) {
+        Members::iterator first = members_.begin();
+        if (operators_.empty()) {
+            operators_.insert(*first);
+            return true;
+        }
+    } 
+    return false;
+}
+
 bool Channel::isInvitedNick(std::string const& nick) const
 {
     return invited_.find(nick) != invited_.end();
@@ -90,13 +102,11 @@ bool Channel::isInvitedNick(std::string const& nick) const
 
 void Channel::inviteNick(std::string const& nick)
 {
-    // do checks
     invited_.insert(nick);
 }
 
 void Channel::consumeInviteNick(std::string const& nick)
 {
-    // do checks
     invited_.erase(nick);
 }
 

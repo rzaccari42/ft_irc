@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/18 06:34:46 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/25 22:29:43 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/28 14:56:30 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,10 +42,17 @@ static std::string replyPrefix()
     return prefix;
 }
 
-static std::string clientTag(Connection& connection)
+static std::string clientPrefix(Connection& connection)
 {
     if (connection.client().getNick().empty()) return "*";
-    return connection.client().getNick();
+    std::string prefix = ":";
+    prefix += connection.client().getNick();
+    prefix += "!";
+    prefix += connection.client().getUser();
+    prefix += "@";
+    prefix += connection.client().getHost();
+
+    return prefix;
 }
 
 // static void reply(Connection& connection, std::string const& lineNoCrlf)
@@ -66,10 +73,14 @@ static void replyNumeric(Connection& connection,
     char num[16];
     std::sprintf(num, "%03d", code);
 
+    std::string nick;
+    if (connection.client().getNick().empty()) nick = "*";
+    else nick = connection.client().getNick();
+
     std::string line = replyPrefix();
     line += num;
     line += " ";
-    line += clientTag(connection);
+    line += nick;
     if (!middle.empty()) {
         line += " ";
         line += middle;
@@ -154,6 +165,7 @@ Cmd CmdProcessor::getCmd(std::string const& s)
     if (s == "PRIVMSG") return PRIVMSG;
     if (s == "QUIT")    return QUIT;
     if (s == "JOIN")    return JOIN;
+    if (s == "PART")    return PART;
     if (s == "TOPIC")   return TOPIC;
     if (s == "INVITE")  return INVITE;
     if (s == "KICK")    return KICK;
@@ -262,7 +274,7 @@ void CmdProcessor::handleNick(Connection& connection, Message const& cmd)
 
     // if user already registered: broadcast nick change
     if (connection.client().isRegistered()) {
-        std::string reply = ":" + (oldNick.empty() ? clientTag(connection) : oldNick);
+        std::string reply = clientPrefix(connection);
         reply += " NICK :";
         reply += nick;
         reply += "\r\n";
@@ -319,7 +331,8 @@ void CmdProcessor::handleNotice(Connection& connection, Message const& cmd)
     if (isChannelName(target)) {
         Channel* channel = connection.server().findChannel(target);
         if (!channel) return;
-        std::string line = ":" + connection.client().getNick();
+        if (!channel->hasMember(&connection)) return;
+        std::string line = clientPrefix(connection);
         line += " PRIVMSG ";
         line += target;
         line += " :";
@@ -331,7 +344,7 @@ void CmdProcessor::handleNotice(Connection& connection, Message const& cmd)
     
     Connection* dst = connection.server().findByNick(target);
     if (!dst) return;
-    std::string line = ":" + connection.client().getNick();
+    std::string line = clientPrefix(connection);
     line += " PRIVMSG ";
     line += target;
     line += " :";
@@ -359,7 +372,11 @@ void CmdProcessor::handlePrivmsg(Connection& connection, Message const& cmd)
             replyNumeric(connection, ERR_NOSUCHCHANNEL, target, "No such channel");
             return;
         }
-        std::string line = ":" + connection.client().getNick();
+        if (!channel->hasMember(&connection)) {
+            replyNumeric(connection, ERR_NOTONCHANNEL, target, "You're not on that channel");
+            return;
+        }
+        std::string line = clientPrefix(connection);
         line += " PRIVMSG ";
         line += target;
         line += " :";
@@ -376,7 +393,7 @@ void CmdProcessor::handlePrivmsg(Connection& connection, Message const& cmd)
     }
     // maybe other errors to handle
 
-    std::string line = ":" + connection.client().getNick();
+    std::string line = clientPrefix(connection);
     line += " PRIVMSG ";
     line += target;
     line += " :";
@@ -387,12 +404,8 @@ void CmdProcessor::handlePrivmsg(Connection& connection, Message const& cmd)
 
 void CmdProcessor::handleQuit(Connection& connection, Message const& cmd)
 {
-    std::string reason = "Client Quit";
-    if (!cmd.params.empty() && !cmd.params[0].empty())
-        reason = cmd.params[0];
-    std::string line = ":" + clientTag(connection) + " QUIT :" + reason + "\r\n";
-    connection.queueSend(line);
-    connection.server().onDisconnect(connection); // no time to receive queued reply ?
+    (void)cmd;
+    connection.server().onDisconnect(connection);
 }
 
 void CmdProcessor::handleJoin(Connection& connection, Message const& cmd)
@@ -407,7 +420,7 @@ void CmdProcessor::handleJoin(Connection& connection, Message const& cmd)
 
     for (std::size_t i = 0; i < chans.size(); ++i) {
         std::string const& chanName = chans[i];
-        std::string key = (i < keys.size()) ? keys[i] : ""; //?
+        std::string key = (i < keys.size()) ? keys[i] : "";
         if (isChannelName(chanName) == false) {
             replyNumeric(connection, ERR_NOSUCHCHANNEL, chanName, "Not a channel name");
             continue;
@@ -436,10 +449,9 @@ void CmdProcessor::handleJoin(Connection& connection, Message const& cmd)
             channel.consumeInviteNick(connection.client().getNick());
 
         channel.addMember(connection);
-        std::string joinLine = ":" + connection.client().getNick() 
+        std::string joinLine = clientPrefix(connection) 
                              + " JOIN " + chanName + "\r\n";
         Channel::Members::const_iterator member;
-        // channel->broadcast() ??
         for (member = channel.members().begin(); member != channel.members().end(); ++member)
             (*member)->queueSend(joinLine);
         if (channel.topic().empty())
@@ -447,15 +459,57 @@ void CmdProcessor::handleJoin(Connection& connection, Message const& cmd)
         else
             replyNumeric(connection, RPL_TOPIC, chanName, channel.topic());
         std::string names = buildNamesList(channel);
-        replyNumeric(connection, RPL_NAMREPLY, "= " + chanName + " " + names, "");
+        replyNumeric(connection, RPL_NAMREPLY, "= " + chanName, names);
         replyNumeric(connection, RPL_ENDOFNAMES, chanName, "End of /NAMES list");
     }
 }
 
 void CmdProcessor::handlePart(Connection& connection, Message const& cmd)
 {
-    (void)connection;
-    (void)cmd;
+    if (cmd.params.size() < 1) {
+        replyNumeric(connection, 461, "PART", "Not enough parameters");
+        return;
+    }
+    
+    std::vector<std::string> chans = splitComma(cmd.params[0]);
+    std::string message;
+    if (cmd.params.size() > 1) message = cmd.params[1];
+    for (std::size_t i = 0; i < chans.size(); ++i) {
+        std::string const& chanName = chans[i];
+        if (isChannelName(chanName) == false) {
+            replyNumeric(connection, ERR_NOSUCHCHANNEL, chanName, "Not a channel name");
+            continue;
+        }
+        Channel* channel = connection.server().findChannel(chanName);
+        if  (!channel) {
+            replyNumeric(connection, ERR_NOSUCHCHANNEL, chanName, "No such channel");
+            continue;
+        }
+        if (!channel->hasMember(&connection)) {
+            replyNumeric(connection, ERR_NOTONCHANNEL, chanName, "You're not on that channel");
+            continue;
+        }
+
+        std::string line = clientPrefix(connection) + " PART " + chanName;
+        if (!message.empty()) line += " :" + message;
+        line += "\r\n";
+        Channel::Members::const_iterator member = channel->members().begin();
+        for (; member != channel->members().end(); ++member)
+            (*member)->queueSend(line);
+
+        channel->remMember(connection);
+        if (connection.server().eraseChannelIfEmpty(chanName)) continue;
+        if (channel->ensureOperator()) {
+            Channel::Members::iterator first = channel->members().begin();
+            std::string line = replyPrefix() + " MODE " + chanName;
+            line += " +o " + (*first)->client().getNick();
+            line += "\r\n";
+            Channel::Members::const_iterator member = channel->members().begin();
+            for (; member != channel->members().end(); ++member)
+                (*member)->queueSend(line);
+        }
+
+    }
 }
 
 void CmdProcessor::handleTopic(Connection& connection, Message const& cmd)
@@ -486,7 +540,7 @@ void CmdProcessor::handleTopic(Connection& connection, Message const& cmd)
     if (channel->hasMember(&connection) == false) {
         replyNumeric(connection, ERR_NOTONCHANNEL, chanName, "You're not on that channel");
         return;
-    } // ??
+    }
     if (channel->hasMode(Channel::MODE_TOPIC_OP) && channel->isOperator(&connection) == false) {
         replyNumeric(connection, ERR_CHANOPRIVSNEEDED, chanName, "You're not channel operator");
         return;
@@ -494,7 +548,7 @@ void CmdProcessor::handleTopic(Connection& connection, Message const& cmd)
     std::string const& newTopic = cmd.params[1];
     channel->setTopic(newTopic);
 
-    std::string line = ":" + connection.client().getNick() + " TOPIC " + chanName + " :" + newTopic + "\r\n";
+    std::string line = clientPrefix(connection) + " TOPIC " + chanName + " :" + newTopic + "\r\n";
     Channel::Members::const_iterator member;
     // channel->broadcast() ??
     for (member = channel->members().begin(); member != channel->members().end(); ++member)
@@ -538,7 +592,7 @@ void CmdProcessor::handleInvite(Connection& connection, Message const& cmd)
     channel->inviteNick(targetNick);
 
     replyNumeric(connection, RPL_INVITING, targetNick + " " + chanName, "");
-    std::string line = ":" + connection.client().getNick() + " INVITE "
+    std::string line = clientPrefix(connection) + " INVITE "
                      + targetNick + " :" + chanName + "\r\n";
     target->queueSend(line);
 }
@@ -581,7 +635,7 @@ void CmdProcessor::handleKick(Connection& connection, Message const& cmd)
     channel->remMember(*target);
     connection.server().eraseChannelIfEmpty(chanName);
 
-    std::string line = ":" + connection.client().getNick()
+    std::string line = clientPrefix(connection)
                      + " KICK " + chanName + " " + targetNick
                      + " :" + reason + "\r\n";
     Channel::Members::const_iterator member = channel->members().begin();
@@ -726,9 +780,9 @@ void CmdProcessor::handleMode(Connection& connection, Message const& cmd)
     }
 
     if (appliedModes.empty())
-        return; // ??
+        return;
 
-    std::string line = ":" + connection.client().getNick() + " MODE " + chanName + " " + appliedModes;
+    std::string line = clientPrefix(connection) + " MODE " + chanName + " " + appliedModes;
     for (std::size_t k = 0; k < appliedArgs.size(); ++k) {
         line += " ";
         line += appliedArgs[k];

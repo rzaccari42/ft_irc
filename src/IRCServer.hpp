@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/18 01:55:58 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/26 02:26:30 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/28 15:06:45 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -71,11 +71,10 @@ class IRCServer {
 
         Channel*            findChannel(std::string const& name);
         Channel&            getOrCreateChannel(std::string const& name);
-        void                eraseChannelIfEmpty(std::string const& name);
+        bool                eraseChannelIfEmpty(std::string const& name);
 
     private:
         // Configuration
-        int             port_;
         std::string     password_;
         Listener        listener_;
         IReactor&       reactor_;

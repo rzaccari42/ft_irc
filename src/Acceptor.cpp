@@ -6,13 +6,14 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 04:00:01 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/22 18:57:35 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/28 05:03:50 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "IRCServer.hpp"
 #include "Acceptor.hpp"
 #include "Connection.hpp"
+#include <arpa/inet.h>
 #include <cerrno>
 #include <fcntl.h>
 #include <cstring>
@@ -34,11 +35,15 @@ short Acceptor::interest() { return POLLIN; }
 void Acceptor::onReadable()
 {
     while (1) {
-        int remote = accept(socket_, NULL, NULL);
+        sockaddr_in addr;
+        socklen_t len = sizeof(addr);
+        int remote = accept(socket_, (sockaddr*)&addr, &len);
         if (remote >= 0) {
             fcntl(remote, F_SETFL, fcntl(remote, F_GETFL) | O_NONBLOCK);
             try {
                 Connection* connection = new Connection(remote, reactor_, server_);
+                char ip[INET_ADDRSTRLEN];
+                connection->client().setHost(inet_ntop(AF_INET, &addr.sin_addr, ip, INET_ADDRSTRLEN));
                 reactor_.addHandler(remote, connection);
                 server_.addConnection(connection);
             } catch (std::bad_alloc& e) {
