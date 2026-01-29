@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/27 19:56:37 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/25 03:53:40 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/29 17:58:40 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,7 @@ Connection::Connection(int socket, IReactor& reactor, IRCServer& server)
 	: AEventHandler(socket, reactor)
     , server_(server) {}
 
-Connection::~Connection() {}
+Connection::~Connection() { close(socket_); }  
 
 IRCServer& Connection::server() { return server_; }
 

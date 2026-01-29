@@ -6,7 +6,7 @@
 /*   By: rzaccari <rzaccari@student.42lausanne.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 01:51:31 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/28 21:47:31 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/29 18:30:25 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,7 +49,7 @@ void IRCServer::shutdown()
     std::cout << "\nShutting down server...\n";
     std::map<int, Connection*>::iterator it = connections_.begin();
     for (; it != connections_.end(); ++it)
-        reactor_.remHandler(it->second->socket());
+		reactor_.remHandler(it->second->socket());	
     reactor_.remHandler(listener_.getSockfd());
 }
 

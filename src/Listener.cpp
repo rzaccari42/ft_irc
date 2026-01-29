@@ -6,14 +6,16 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/22 23:16:58 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/26 02:28:37 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/29 18:37:00 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Listener.hpp"
 #include <stdexcept>
+#include <unistd.h>
 
-Listener::Listener(uint16_t port) {
+Listener::Listener(uint16_t port)
+{
 	sockaddr_in address;
 	memset(&address, 0, sizeof(address));
 	address.sin_family = AF_INET;
@@ -24,16 +26,16 @@ Listener::Listener(uint16_t port) {
 		throw std::runtime_error("socket syscall failed");
 	if (fcntl(socket_,  F_SETFL, O_NONBLOCK) == -1)
 		throw std::runtime_error("fcntl syscall failed");
-	if (bind(socket_, (sockaddr*)&address, sizeof(sockaddr)) == -1)
+	if (bind(socket_, (sockaddr*)&address, sizeof(sockaddr)) == -1) {
+		close(socket_);	
 		throw std::runtime_error("bind syscall failed");
-	if (listen(socket_, MAX_CONNECT) == -1)
+	}
+	if (listen(socket_, MAX_CONNECT) == -1) {
+		close(socket_);
 		throw std::runtime_error("listen syscall failed");
+	}
 }
 
-Listener::~Listener() {
-	close(socket_);
-}
+Listener::~Listener() { close(socket_); }
 
-int	Listener::getSockfd() const {
-	return socket_;
-}
+int	Listener::getSockfd() const { return socket_; }

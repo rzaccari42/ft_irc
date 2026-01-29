@@ -6,11 +6,9 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/23 20:36:30 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/28 04:17:08 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/29 18:35:37 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
-#pragma once
 
 #ifndef CLIENT_HPP
 # define CLIENT_HPP

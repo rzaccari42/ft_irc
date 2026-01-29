@@ -6,7 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 02:22:04 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/26 03:11:45 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/01/29 18:29:39 by razaccar         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,7 +51,6 @@ void	Dispatcher::remHandler(int socket)
     delete entry->second.handler;
     registry_.erase(entry);
     poll_.remove(socket);
-    close(socket);
 }
 
 void    Dispatcher::updateEvents(int socket)
@@ -116,8 +115,8 @@ void Dispatcher::flushRem()
     for (socket = pendingRem_.begin(); socket != pendingRem_.end(); socket++) {
         std::map<int, HandlerEntry>::iterator entry = registry_.find(*socket);
         if (entry == registry_.end()) continue;
-        poll_.remove(*socket);
         delete entry->second.handler;
+        poll_.remove(*socket);
         registry_.erase(entry);
     }
 }
