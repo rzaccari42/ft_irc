@@ -1,16 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Connection.cpp                                     :+:      :+:    :+:   */
+/*   Connection.cpp                                      :+:    :+:           */
 /*                                                    +:+ +:+         +:+     */
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/27 19:56:37 by razaccar          #+#    #+#             */
-<<<<<<< HEAD
-/*   Updated: 2026/01/29 20:28:26 by razaccar         ###   ########.fr       */
-=======
-/*   Updated: 2026/01/29 17:58:40 by razaccar         ###   ########.fr       */
->>>>>>> 6096acbed1b57c64e0b2166bd1b2512ec75a8b8d
+/*   Updated: 2026/03/12 21:48:17 by razaccar       ########   odam.nl        */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,11 +28,7 @@ Connection::Connection(int socket, IReactor& reactor, IRCServer& server)
 	: AEventHandler(socket, reactor)
     , server_(server) {}
 
-<<<<<<< HEAD
 Connection::~Connection() { close(socket_); }
-=======
-Connection::~Connection() { close(socket_); }  
->>>>>>> 6096acbed1b57c64e0b2166bd1b2512ec75a8b8d
 
 IRCServer& Connection::server() { return server_; }
 
