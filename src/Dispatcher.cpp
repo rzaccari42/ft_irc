@@ -6,11 +6,7 @@
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 02:22:04 by razaccar          #+#    #+#             */
-<<<<<<< HEAD
-/*   Updated: 2026/03/12 21:32:00 by razaccar       ########   odam.nl        */
-=======
-/*   Updated: 2026/01/29 18:29:39 by razaccar         ###   ########.fr       */
->>>>>>> 6096acbed1b57c64e0b2166bd1b2512ec75a8b8d
+/*   Updated: 2026/03/12 21:50:52 by razaccar       ########   odam.nl        */
 /*                                                                            */
 /* ************************************************************************** */
 
