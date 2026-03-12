@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Dispatcher.cpp                                     :+:      :+:    :+:   */
+/*   Dispatcher.cpp                                      :+:    :+:           */
 /*                                                    +:+ +:+         +:+     */
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 02:22:04 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/26 03:11:45 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/03/12 21:32:00 by razaccar       ########   odam.nl        */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,7 +51,6 @@ void	Dispatcher::remHandler(int socket)
     delete entry->second.handler;
     registry_.erase(entry);
     poll_.remove(socket);
-    close(socket);
 }
 
 void    Dispatcher::updateEvents(int socket)
@@ -120,6 +119,7 @@ void Dispatcher::flushRem()
         delete entry->second.handler;
         registry_.erase(entry);
     }
+    pendingRem_.clear();
 }
 
 void Dispatcher::flushUpdate()

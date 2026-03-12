@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Acceptor.cpp                                       :+:      :+:    :+:   */
+/*   Acceptor.cpp                                        :+:    :+:           */
 /*                                                    +:+ +:+         +:+     */
 /*   By: razaccar <razaccar@student.42lausanne.ch>  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/26 04:00:01 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/28 05:03:50 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/03/12 21:32:26 by razaccar       ########   odam.nl        */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,5 +72,4 @@ void Acceptor::onError(short revents)
         std::cout << "ERROR (POLLERR): socket connection failed" << std::endl;
     else if (revents & POLLHUP)
         std::cout << "ERROR (POLLHUP): socket connection failed" << std::endl;
-    reactor_.remHandler(socket_); // to check
 }
