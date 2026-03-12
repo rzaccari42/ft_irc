@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   IRCServer.cpp                                      :+:      :+:    :+:   */
+/*   IRCServer.cpp                                       :+:    :+:           */
 /*                                                    +:+ +:+         +:+     */
 /*   By: rzaccari <rzaccari@student.42lausanne.c    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/01/19 01:51:31 by razaccar          #+#    #+#             */
-/*   Updated: 2026/01/29 20:17:44 by razaccar         ###   ########.fr       */
+/*   Updated: 2026/03/12 21:44:37 by razaccar       ########   odam.nl        */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -114,8 +114,8 @@ void IRCServer::onDisconnect(Connection& connection)
 }
 
 void IRCServer::broadcastNickChange(Connection& connection,
-									std::string const& oldNick,
-									std::string const& newNick)
+			 	    std::string const& oldNick,
+				    std::string const& newNick)
 {
     std::map<std::string, Channel>::iterator channel = channels_.begin();
 	for (; channel != channels_.end(); ++channel) {
