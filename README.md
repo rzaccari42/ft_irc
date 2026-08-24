@@ -15,15 +15,15 @@ This IRC server supports client authentication, nickname and username registrati
 ### Build
 Compile and the project using the provided `Makefile`:
 ```bash
-make            # Compile ./ircserv executable
+make            # Compile ./bin/ircserv executable
 make clean      # Remove compilation files
 make fclean     # Remove compilation files and executable
-make re         # Recompile ./ircserv executable
+make re         # Recompile ./bin/ircserv executable
 ```
 
 ### Usage
 **Running server**
-`./ircserv <port> <password>`
+`./bin/ircserv <port> <password>`
 - <port>: The port number on which the server will listen for incoming connections.
 - <password>: The connection password required by clients to authenticate.
 
